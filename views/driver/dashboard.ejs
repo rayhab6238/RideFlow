@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Driver Dashboard | RideFlow</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container">
+        <div class="navbar-brand">RideFlow</div>
+        <div class="navbar-nav">
+            <span>Welcome, <%= user.FullName %> (Driver)</span>
+            <a href="/auth/logout" class="btn btn-outline" style="padding: 0.25rem 1rem;">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="padding-top: var(--space-8);">
+    <h2>Driver Dashboard</h2>
+    
+    <% if (driver.Verif_Status === 'Pending') { %>
+        <div class="card" style="text-align: center; padding: var(--space-8); margin-top: var(--space-6);">
+            <h1 style="color: var(--color-accent); font-size: 3rem;">🕒</h1>
+            <h3 style="margin-top: var(--space-4);">Pending Verification</h3>
+            <p class="text-muted">Your account is currently under review by an administrator. You will be able to start accepting rides once you are approved.</p>
+        </div>
+    <% } else { %>
+        <p class="text-muted">Manage your status and earnings.</p>
+
+        <div class="bento-grid">
+            <div class="card" style="text-align: center;">
+                <div class="card-header">
+                    <h3>Current Status</h3>
+                </div>
+                <% if (driver.Availability_Status === 'Online') { %>
+                    <div style="font-size: 2rem; color: var(--color-success); font-weight: bold; margin: var(--space-4) 0;">
+                        ONLINE
+                    </div>
+                <% } else if (driver.Availability_Status === 'Offline') { %>
+                    <div style="font-size: 2rem; color: var(--color-text-muted); font-weight: bold; margin: var(--space-4) 0;">
+                        OFFLINE
+                    </div>
+                <% } else { %>
+                    <div style="font-size: 2rem; color: var(--color-accent); font-weight: bold; margin: var(--space-4) 0;">
+                        ON TRIP
+                    </div>
+                <% } %>
+
+                <form action="/driver/toggle-status" method="POST">
+                    <button type="submit" class="btn <%= driver.Availability_Status === 'Online' ? 'btn-outline' : 'btn-primary' %>">
+                        <%= driver.Availability_Status === 'Online' ? 'Go Offline' : 'Go Online' %>
+                    </button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Total Earnings</h3>
+                </div>
+                <h1 style="font-size: 3rem; color: var(--color-success);">Rs. <%= earnings %></h1>
+                
+                <div style="display: flex; gap: var(--space-4); margin-top: var(--space-4);">
+                    <div>
+                        <p class="text-muted" style="font-size: 0.8rem;">Rating</p>
+                        <p style="font-weight: bold; font-size: 1.2rem;">★ <%= driver.Avg_Rating %></p>
+                    </div>
+                    <div>
+                        <p class="text-muted" style="font-size: 0.8rem;">Trips</p>
+                        <p style="font-weight: bold; font-size: 1.2rem;"><%= driver.Total_Trips %></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Ride Requests -->
+        <div class="card" style="margin-top: var(--space-8); border-left: 5px solid var(--color-primary);">
+            <div class="card-header">
+                <h3>Incoming Ride Requests</h3>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rider</th>
+                            <th>Pickup</th>
+                            <th>Drop-off</th>
+                            <th>Fare</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (pendingRequests.length > 0) { %>
+                            <% pendingRequests.forEach(request => { %>
+                                <tr>
+                                    <td><strong><%= request.RiderName %></strong></td>
+                                    <td><%= request.PickupStreet %>, <%= request.PickupCity %></td>
+                                    <td><%= request.DropoffStreet %>, <%= request.DropoffCity %></td>
+                                    <td><strong class="text-success">Rs. <%= request.Fare %></strong></td>
+                                    <td>
+                                        <div style="display: flex; gap: 5px;">
+                                            <form action="/driver/accept-ride/<%= request.Ride_ID %>" method="POST">
+                                                <button type="submit" class="btn btn-primary" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">Accept</button>
+                                            </form>
+                                            <form action="/driver/cancel-ride/<%= request.Ride_ID %>" method="POST">
+                                                <button type="submit" class="btn btn-outline" style="color: var(--color-error); border-color: var(--color-error); padding: 0.2rem 0.8rem; font-size: 0.8rem;">Decline</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No new requests at the moment.</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: var(--space-8);">
+            <div class="card-header">
+                <h3>Trip History</h3>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Pickup</th>
+                            <th>Drop-off</th>
+                            <th>Status</th>
+                            <th>Fare</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (history.length > 0) { %>
+                            <% history.forEach(ride => { %>
+                                <tr>
+                                    <td><%= new Date(ride.Request_Time).toLocaleDateString() %></td>
+                                    <td><%= ride.PickupStreet %>, <%= ride.PickupCity %></td>
+                                    <td><%= ride.DropoffStreet %>, <%= ride.DropoffCity %></td>
+                                    <td>
+                                        <% if (ride.Ride_Status === 'Completed') { %>
+                                            <span style="padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-success); color: white; font-size: 0.8rem;">
+                                                <%= ride.Ride_Status %>
+                                            </span>
+                                        <% } else { %>
+                                            <span style="padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-accent); color: white; font-size: 0.8rem;">
+                                                <%= ride.Ride_Status %>
+                                            </span>
+                                        <% } %>
+                                    </td>
+                                    <td>Rs. <%= ride.Fare || '-' %></td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No trips yet.</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: var(--space-8);">
+            <div class="card-header">
+                <h3>Recent Reviews</h3>
+            </div>
+            <% if (typeof reviews !== 'undefined' && reviews.length > 0) { %>
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                    <% reviews.forEach(review => { %>
+                        <div style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-3);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                                <strong><%= review.RiderName %></strong>
+                                <span style="color: #f1c40f;">
+                                    <%= '★'.repeat(review.Score) %><%= '☆'.repeat(5 - review.Score) %>
+                                </span>
+                            </div>
+                            <p style="margin: 0; color: var(--color-text-muted); font-style: italic;">"<%= review.Comment %>"</p>
+                            <small style="color: var(--color-text-muted);"><%= new Date(review.Timestamp).toLocaleDateString() %></small>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } else { %>
+                <p class="text-muted text-center" style="padding: var(--space-4) 0;">No reviews yet.</p>
+            <% } %>
+        </div>
+    <% } %>
+</div>
+
+</body>
+</html>

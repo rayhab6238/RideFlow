@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | RideFlow</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+            background-color: var(--color-surface);
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            padding: var(--space-8);
+        }
+        .login-card h1 {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-2);
+        }
+        .login-card p {
+            margin-bottom: var(--space-6);
+        }
+        .error-msg {
+            background-color: #F5DDD6;
+            color: var(--color-error);
+            padding: var(--space-3);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--space-4);
+            font-size: var(--text-sm);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-wrapper">
+    <div class="card login-card">
+        <h1>RideFlow</h1>
+        <p class="text-muted">Welcome back. Please log in.</p>
+
+        <% if (error) { %>
+            <div class="error-msg"><%= error %></div>
+        <% } %>
+
+        <form action="/auth/login" method="POST" style="text-align: left;">
+            <div class="form-group">
+                <label class="form-label" for="email_or_phone">Email or Phone</label>
+                <input type="text" id="email_or_phone" name="email_or_phone" class="form-control" required placeholder="e.g. ali@gmail.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-control" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--space-4);">Sign In</button>
+            
+            <p class="text-center" style="margin-top: var(--space-4); font-size: var(--text-sm);">
+                Don't have an account? <a href="/auth/register">Sign up here</a>
+            </p>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

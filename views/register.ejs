@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | RideFlow</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .register-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+            background-color: var(--color-surface);
+        }
+        .register-card {
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            padding: var(--space-8);
+        }
+        .register-card h1 {
+            font-size: 2rem;
+            margin-bottom: var(--space-2);
+        }
+        .error-msg {
+            background-color: #F5DDD6;
+            color: var(--color-error);
+            padding: var(--space-3);
+            border-radius: var(--radius-sm);
+            margin-bottom: var(--space-4);
+            font-size: var(--text-sm);
+        }
+        .driver-fields {
+            display: none;
+            margin-top: var(--space-4);
+            padding-top: var(--space-4);
+            border-top: 1px dashed var(--color-border);
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-wrapper">
+    <div class="card register-card">
+        <h1>Create an Account</h1>
+        <p class="text-muted" style="margin-bottom: var(--space-6);">Join RideFlow as a Rider or Driver.</p>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="error-msg"><%= error %></div>
+        <% } %>
+
+        <form action="/auth/register" method="POST" style="text-align: left;">
+            <div class="form-group">
+                <label class="form-label" for="role">I want to sign up as a:</label>
+                <select id="role" name="role" class="form-control" onchange="toggleDriverFields()" required>
+                    <option value="Rider">Rider</option>
+                    <option value="Driver">Driver</option>
+                    <option value="Admin">Admin</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="fullname">Full Name</label>
+                <input type="text" id="fullname" name="fullname" class="form-control" required placeholder="John Doe">
+            </div>
+
+            <div style="display: flex; gap: var(--space-4);">
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-control" required placeholder="john@example.com">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label" for="phone">Phone Number</label>
+                    <input type="text" id="phone" name="phone" class="form-control" required placeholder="03001234567">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="form-control" required placeholder="••••••••">
+            </div>
+
+            <div id="driverFields" class="driver-fields">
+                <h3 style="font-size: 1.1rem; margin-bottom: var(--space-2);">Driver Details</h3>
+                <div class="form-group">
+                    <label class="form-label" for="cnic">CNIC</label>
+                    <input type="text" id="cnic" name="cnic" class="form-control" placeholder="12345-1234567-1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="license">License Number</label>
+                    <input type="text" id="license" name="license" class="form-control" placeholder="LIC-12345">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--space-4);">Register</button>
+            
+            <p class="text-center" style="margin-top: var(--space-4); font-size: var(--text-sm);">
+                Already have an account? <a href="/auth/login">Log in here</a>
+            </p>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleDriverFields() {
+        const role = document.getElementById('role').value;
+        const driverFields = document.getElementById('driverFields');
+        const cnic = document.getElementById('cnic');
+        const license = document.getElementById('license');
+        
+        if (role === 'Driver') {
+            driverFields.style.display = 'block';
+            cnic.required = true;
+            license.required = true;
+        } else {
+            driverFields.style.display = 'none';
+            cnic.required = false;
+            license.required = false;
+        }
+    }
+    // Initialize state
+    toggleDriverFields();
+</script>
+
+</body>
+</html>

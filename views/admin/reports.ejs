@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Analytics & Reports | RideFlow Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .report-card { margin-bottom: var(--space-8); }
+        .report-card h3 { margin-bottom: var(--space-4); color: var(--color-primary); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container">
+        <div class="navbar-brand">RideFlow Admin</div>
+        <div class="navbar-nav">
+            <a href="/admin" class="btn btn-outline" style="padding: 0.25rem 1rem; border-color: transparent;">Dashboard</a>
+            <a href="/admin/reports" class="btn btn-primary" style="padding: 0.25rem 1rem;">Reports</a>
+            <span style="margin-left: var(--space-4);">Welcome, <%= user.FullName %></span>
+            <a href="/auth/logout" class="btn btn-outline" style="padding: 0.25rem 1rem;">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="padding-top: var(--space-8); padding-bottom: var(--space-12);">
+    <h2>Analytics & Reports</h2>
+    <p class="text-muted" style="margin-bottom: var(--space-8);">System-wide required queries and analytics.</p>
+
+    <div class="bento-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: var(--space-8);">
+        <!-- 1. Revenue per City -->
+        <div class="card">
+            <h3>Total Revenue per City</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>City</th><th>Total Revenue (Rs.)</th></tr></thead>
+                    <tbody>
+                        <% if(revenuePerCity.length > 0) { %>
+                            <% revenuePerCity.forEach(r => { %>
+                                <tr><td><%= r.City %></td><td class="text-success" style="font-weight:bold;"><%= r.Total_Revenue %></td></tr>
+                            <% }) %>
+                        <% } else { %><tr><td colspan="2" class="text-center text-muted">No data available</td></tr><% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. Low Rated Drivers -->
+        <div class="card">
+            <h3>Drivers Below 3.5 Rating</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Driver ID</th><th>Name</th><th>Average Rating</th></tr></thead>
+                    <tbody>
+                        <% if(lowRatedDrivers.length > 0) { %>
+                            <% lowRatedDrivers.forEach(r => { %>
+                                <tr><td><%= r.Driver_ID %></td><td><%= r.FullName %></td><td class="text-error" style="font-weight:bold;">★ <%= parseFloat(r.Average_Rating).toFixed(2) %></td></tr>
+                            <% }) %>
+                        <% } else { %><tr><td colspan="3" class="text-center text-muted">No drivers below 3.5 rating!</td></tr><% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. Trips per Driver -->
+        <div class="card">
+            <h3>Completed Trips per Driver</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Driver ID</th><th>Name</th><th>Completed Trips</th></tr></thead>
+                    <tbody>
+                        <% if(tripsPerDriver.length > 0) { %>
+                            <% tripsPerDriver.forEach(r => { %>
+                                <tr><td><%= r.Driver_ID %></td><td><%= r.FullName %></td><td><%= r.Total_Completed_Trips %></td></tr>
+                            <% }) %>
+                        <% } else { %><tr><td colspan="3" class="text-center text-muted">No trips completed yet.</td></tr><% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6. Drivers in Islamabad by Rating -->
+        <div class="card">
+            <h3>Islamabad Drivers by Rating</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Name</th><th>Rating</th><th>Total Trips</th></tr></thead>
+                    <tbody>
+                        <% if(driversByCity.length > 0) { %>
+                            <% driversByCity.forEach(r => { %>
+                                <tr><td><%= r.Driver_Name %></td><td style="color:#f1c40f;">★ <%= r.Avg_Rating %></td><td><%= r.Total_Trips %></td></tr>
+                            <% }) %>
+                        <% } else { %><tr><td colspan="3" class="text-center text-muted">No drivers in Islamabad.</td></tr><% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Payments & Promo Codes -->
+    <div class="card report-card">
+        <h3>Payments and Promo Codes</h3>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Payment ID</th><th>Amount</th><th>Method</th><th>Promo Code Used</th><th>Discount Applied</th></tr></thead>
+                <tbody>
+                    <% if(paymentsPromos.length > 0) { %>
+                        <% paymentsPromos.forEach(r => { %>
+                            <tr>
+                                <td>#<%= r.Payment_ID %></td>
+                                <td>Rs. <%= r.Amount %></td>
+                                <td><%= r.Payment_Method %></td>
+                                <td><%= r.Promo_Code ? r.Promo_Code : '-' %></td>
+                                <td class="text-success"><%= r.Discount ? 'Rs. '+r.Discount : '-' %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %><tr><td colspan="5" class="text-center text-muted">No payments found.</td></tr><% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. Riders Report -->
+    <div class="card report-card">
+        <h3>All Riders (Including Zero Rides)</h3>
+        <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+            <table>
+                <thead><tr><th>Rider Name</th><th>Ride ID</th><th>Status</th></tr></thead>
+                <tbody>
+                    <% if(allRidersReport.length > 0) { %>
+                        <% allRidersReport.forEach(r => { %>
+                            <tr>
+                                <td><%= r.Rider_Name %></td>
+                                <td><%= r.Ride_ID ? '#' + r.Ride_ID : 'No Rides' %></td>
+                                <td><%= r.Ride_Status ? r.Ride_Status : '-' %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %><tr><td colspan="3" class="text-center text-muted">No riders found.</td></tr><% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 7. Full Report -->
+    <div class="card report-card">
+        <h3>System Full Report (Master List)</h3>
+        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ride ID</th>
+                        <th>Rider</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Fare</th>
+                        <th>Distance (km)</th>
+                        <th>Duration (min)</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if(fullReport.length > 0) { %>
+                        <% fullReport.forEach(r => { %>
+                            <tr>
+                                <td>#<%= r.Ride_ID %></td>
+                                <td><%= r.Rider_Name %></td>
+                                <td><%= r.Driver_Name %></td>
+                                <td><%= r.Make %> <%= r.Model %> (<%= r.Vehicle_Type %>)</td>
+                                <td>Rs. <%= r.Fare %></td>
+                                <td><%= r.Distance_KM %></td>
+                                <td><%= r.Duration_Minutes %></td>
+                                <td><%= r.Ride_Status %></td>
+                                <td><%= new Date(r.Request_Time).toLocaleDateString() %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %><tr><td colspan="9" class="text-center text-muted">No full report data available.</td></tr><% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bento-grid" style="grid-template-columns: 1fr 1fr;">
+        <!-- 8. Active Rides View -->
+        <div class="card report-card">
+            <h3>Active Rides (From SQL View)</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ride ID</th>
+                            <th>Rider</th>
+                            <th>Driver</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if(activeRidesView.length > 0) { %>
+                            <% activeRidesView.forEach(r => { %>
+                                <tr>
+                                    <td>#<%= r.Ride_ID %></td>
+                                    <td><%= r.Rider_Name %></td>
+                                    <td><%= r.Driver_Name %></td>
+                                    <td class="text-success"><%= r.Ride_Status %></td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %><tr><td colspan="4" class="text-center text-muted">No active rides right now.</td></tr><% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 9. Top Drivers View -->
+        <div class="card report-card">
+            <h3>Top Drivers (From SQL View)</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Driver ID</th>
+                            <th>Name</th>
+                            <th>Rating</th>
+                            <th>Total Trips</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if(topDriversView.length > 0) { %>
+                            <% topDriversView.forEach(r => { %>
+                                <tr>
+                                    <td><%= r.Driver_ID %></td>
+                                    <td><%= r.FullName %></td>
+                                    <td style="color:#f1c40f; font-weight:bold;">★ <%= r.Avg_Rating %></td>
+                                    <td><%= r.Total_Trips %></td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %><tr><td colspan="4" class="text-center text-muted">No drivers above 4.5 rating yet.</td></tr><% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard | RideFlow</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container">
+        <div class="navbar-brand">RideFlow Admin</div>
+        <div class="navbar-nav">
+            <a href="/admin" class="btn btn-primary" style="padding: 0.25rem 1rem;">Dashboard</a>
+            <a href="/admin/reports" class="btn btn-outline" style="padding: 0.25rem 1rem; border-color: transparent;">Reports</a>
+            <span style="margin-left: var(--space-4);">Welcome, <%= user.FullName %></span>
+            <a href="/auth/logout" class="btn btn-outline" style="padding: 0.25rem 1rem;">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="padding-top: var(--space-8);">
+    <h2>System Overview</h2>
+    
+    <div class="bento-grid" style="grid-template-columns: repeat(4, 1fr); margin-top: var(--space-6);">
+        <div class="card" style="text-align: center; padding: var(--space-4);">
+            <p class="text-muted">Total Users</p>
+            <h1 style="color: var(--color-primary);"><%= stats.totalUsers %></h1>
+        </div>
+        <div class="card" style="text-align: center; padding: var(--space-4); cursor: pointer;" onclick="openModal('ridersModal')">
+            <p class="text-muted">Riders <span style="font-size: 0.8rem;">(Click to view)</span></p>
+            <h1 style="color: var(--color-dark);"><%= stats.totalRiders %></h1>
+        </div>
+        <div class="card" style="text-align: center; padding: var(--space-4); cursor: pointer;" onclick="openModal('driversModal')">
+            <p class="text-muted">Drivers <span style="font-size: 0.8rem;">(Click to view)</span></p>
+            <h1 style="color: var(--color-dark);"><%= stats.totalDrivers %></h1>
+        </div>
+        <div class="card" style="text-align: center; padding: var(--space-4);">
+            <p class="text-muted">Total Revenue</p>
+            <h1 style="color: var(--color-success);">Rs. <%= stats.totalRevenue %></h1>
+        </div>
+    </div>
+
+    <% if (typeof notifications !== 'undefined' && notifications.length > 0) { %>
+        <div style="margin-top: var(--space-6);">
+            <% notifications.forEach(notif => { %>
+                <div style="background-color: rgba(231, 76, 60, 0.1); border-left: 4px solid var(--color-error); padding: var(--space-4); margin-bottom: var(--space-3); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: var(--color-error);">⚠️ SYSTEM ALERT</strong>
+                        <p style="margin: 5px 0 0 0; color: var(--color-dark);"><%= notif.Message %></p>
+                    </div>
+                    <small style="color: var(--color-text-muted);"><%= new Date(notif.Created_At).toLocaleString() %></small>
+                </div>
+            <% }) %>
+        </div>
+    <% } %>
+
+    <div class="bento-grid" style="grid-template-columns: 1fr;">
+        <div class="card">
+            <div class="card-header">
+                <h3>Recent Rides</h3>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Rider</th>
+                            <th>Driver</th>
+                            <th>Status</th>
+                            <th>Fare</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% recentRides.forEach(ride => { %>
+                            <tr>
+                                <td>#<%= ride.Ride_ID %></td>
+                                <td><%= ride.RiderName %></td>
+                                <td><%= ride.DriverName || 'Unassigned' %></td>
+                                <td><%= ride.Ride_Status %></td>
+                                <td>Rs. <%= ride.Fare || '-' %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Vehicle Verification</h3>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vehicle</th>
+                            <th>Plate</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% vehicles.forEach(v => { %>
+                            <tr>
+                                <td><%= v.Make %> <%= v.Model %></td>
+                                <td><%= v.License_Plate %></td>
+                                <td><%= v.Vehicle_Type %></td>
+                                <td>
+                                    <span class="<%= v.Verification_Status === 'Verified' ? 'text-success' : 'text-error' %>">
+                                        <%= v.Verification_Status %>
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="bento-grid" style="grid-template-columns: 1fr; margin-top: var(--space-8);">
+        <div class="card">
+            <div class="card-header">
+                <h3>Pending Driver Verifications</h3>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Driver Name</th>
+                            <th>CNIC</th>
+                            <th>License</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (typeof pendingDrivers !== 'undefined' && pendingDrivers.length > 0) { %>
+                            <% pendingDrivers.forEach(driver => { %>
+                                <tr>
+                                    <td><%= driver.FullName %></td>
+                                    <td><%= driver.CNIC %></td>
+                                    <td><%= driver.License_Number %></td>
+                                    <td>
+                                        <div style="display: flex; gap: 5px;">
+                                            <form action="/admin/approve-driver/<%= driver.Driver_ID %>" method="POST">
+                                                <button type="submit" class="btn btn-success" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Approve</button>
+                                            </form>
+                                            <form action="/admin/reject-driver/<%= driver.Driver_ID %>" method="POST" onsubmit="return confirm('Are you sure you want to decline this driver?');">
+                                                <button type="submit" class="btn btn-outline" style="color: var(--color-error); border-color: var(--color-error); padding: 0.2rem 0.5rem; font-size: 0.8rem;">Decline</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No pending drivers.</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Recent System Reviews</h3>
+            </div>
+            <% if (typeof reviews !== 'undefined' && reviews.length > 0) { %>
+                <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                    <% reviews.forEach(review => { %>
+                        <div style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-3);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+                                <div>
+                                    <strong><%= review.DriverName %></strong>
+                                    <span class="text-muted" style="font-size: 0.8rem; margin-left: 0.5rem;">rated by <%= review.RiderName %></span>
+                                </div>
+                                <span style="color: #f1c40f;">
+                                    <%= '★'.repeat(review.Score) %><%= '☆'.repeat(5 - review.Score) %>
+                                </span>
+                            </div>
+                            <p style="margin: 0; color: var(--color-text-muted); font-style: italic;">"<%= review.Comment %>"</p>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } else { %>
+                <p class="text-muted text-center" style="padding: var(--space-4) 0;">No reviews in the system yet.</p>
+            <% } %>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Fare Configuration</h3>
+            </div>
+            <form action="/admin/update-fare" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Base Rate (Rs.)</label>
+                    <input type="number" step="0.01" class="form-control" name="baseRate" value="<%= currentFareRules.Base_Rate %>" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Per KM Rate (Rs.)</label>
+                    <input type="number" step="0.01" class="form-control" name="perKmRate" value="<%= currentFareRules.Per_KM_Rate %>" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Per Minute Rate (Rs.)</label>
+                    <input type="number" step="0.01" class="form-control" name="perMinRate" value="<%= currentFareRules.Per_Min_Rate %>" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: var(--space-2);">Update Pricing Engine</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<style>
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-content {
+        background: var(--color-bg);
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        border-radius: var(--radius-xl);
+        padding: var(--space-6);
+        overflow-y: auto;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+    }
+    .modal-close {
+        position: absolute;
+        top: var(--space-4);
+        right: var(--space-4);
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--color-text-muted);
+    }
+</style>
+
+<!-- Riders Modal -->
+<div class="modal-overlay" id="ridersModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('ridersModal')">&times;</button>
+        <h3 style="margin-bottom: var(--space-4);">All Registered Riders</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% allRiders.forEach(r => { %>
+                        <tr>
+                            <td><%= r.FullName %></td>
+                            <td><%= r.Email || 'N/A' %></td>
+                            <td><%= r.Phone || 'N/A' %></td>
+                            <td>
+                                <span class="<%= r.Account_Status === 'Active' ? 'text-success' : 'text-error' %>">
+                                    <%= r.Account_Status %>
+                                </span>
+                            </td>
+                            <td>
+                                <form action="/admin/remove-user" method="POST" onsubmit="return confirm('Are you sure you want to remove this rider? This action cannot be undone.');">
+                                    <input type="hidden" name="userId" value="<%= r.User_ID %>">
+                                    <button type="submit" class="btn btn-outline" style="color: var(--color-error); border-color: var(--color-error); padding: 0.2rem 0.5rem; font-size: 0.8rem;">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Drivers Modal -->
+<div class="modal-overlay" id="driversModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('driversModal')">&times;</button>
+        <h3 style="margin-bottom: var(--space-4);">All Registered Drivers</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>CNIC</th>
+                        <th>License</th>
+                        <th>Verification</th>
+                        <th>Account Status</th>
+                        <th>Rating</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% allDrivers.forEach(d => { %>
+                        <tr>
+                            <td><%= d.FullName %></td>
+                            <td><%= d.Phone || 'N/A' %></td>
+                            <td><%= d.CNIC || 'N/A' %></td>
+                            <td><%= d.License_Number || 'N/A' %></td>
+                            <td>
+                                <span class="<%= d.Verif_Status === 'Verified' ? 'text-success' : 'text-muted' %>">
+                                    <%= d.Verif_Status %>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="<%= d.Account_Status === 'Active' ? 'text-success' : 'text-error' %>">
+                                    <%= d.Account_Status %>
+                                </span>
+                            </td>
+                            <td>★ <%= d.Avg_Rating %></td>
+                            <td>
+                                <div style="display: flex; gap: 5px;">
+                                    <% if (d.Account_Status === 'Suspended') { %>
+                                        <form action="/admin/unsuspend-driver/<%= d.User_ID %>" method="POST">
+                                            <button type="submit" class="btn btn-success" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Unsuspend</button>
+                                        </form>
+                                    <% } %>
+                                    <form action="/admin/remove-user" method="POST" onsubmit="return confirm('Are you sure you want to remove this driver? This action cannot be undone.');">
+                                        <input type="hidden" name="userId" value="<%= d.User_ID %>">
+                                        <button type="submit" class="btn btn-outline" style="color: var(--color-error); border-color: var(--color-error); padding: 0.2rem 0.5rem; font-size: 0.8rem;">Remove</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal(id) {
+        document.getElementById(id).style.display = 'flex';
+    }
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+    // Close on click outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rider Dashboard | RideFlow</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .autocomplete-results {
+            position: absolute;
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: var(--shadow-md);
+            display: none;
+        }
+        .autocomplete-item {
+            padding: var(--space-2) var(--space-3);
+            cursor: pointer;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .autocomplete-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .form-group { position: relative; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container">
+        <div class="navbar-brand">RideFlow</div>
+        <div class="navbar-nav">
+            <span>Welcome, <%= user.FullName %> (Rider)</span>
+            <a href="/auth/logout" class="btn btn-outline" style="padding: 0.25rem 1rem;">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="padding-top: var(--space-8);">
+    <h2>Rider Dashboard</h2>
+    <p class="text-muted">Manage your rides and wallet from here.</p>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+        <div style="background-color: #F5DDD6; color: var(--color-error); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-4);">
+            <%= error %>
+        </div>
+    <% } %>
+
+    <% if (activeRide) { %>
+        <div class="card" style="margin-bottom: var(--space-6); border: 2px solid var(--color-success); background-color: rgba(60, 184, 110, 0.05);">
+            <div class="card-header" style="justify-content: space-between;">
+                <h3>🚕 Ongoing Ride</h3>
+                <span style="color: var(--color-success); font-weight: bold;">En Route</span>
+            </div>
+            <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-4);">
+                <div style="flex: 1;">
+                    <p class="text-muted" style="margin-bottom: 0;">Driver</p>
+                    <p style="font-weight: bold;"><%= activeRide.DriverName %> (★ <%= activeRide.DriverRating %>)</p>
+                </div>
+                <div style="flex: 1;">
+                    <p class="text-muted" style="margin-bottom: 0;">Route</p>
+                    <p style="font-weight: bold;"><%= activeRide.PickupStreet %> → <%= activeRide.DropoffStreet %></p>
+                </div>
+                <div style="flex: 1; text-align: right;">
+                    <p class="text-muted" style="margin-bottom: 0;">Total Fare</p>
+                    <p style="font-weight: bold; font-size: 1.5rem; color: var(--color-dark);">Rs. <%= activeRide.Fare %></p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: var(--space-4);">
+                <form action="/rider/pay/<%= activeRide.Ride_ID %>" method="POST" style="flex: 2; display: flex; flex-direction: column; gap: var(--space-3);">
+                    <input type="text" name="promoCode" class="form-control" placeholder="Enter Promo Code (e.g., FAST50)" style="width: 100%;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: var(--space-3);">
+                        Pay Rs. <%= activeRide.Fare %> & Complete Ride
+                    </button>
+                </form>
+
+                <form action="/rider/cancel/<%= activeRide.Ride_ID %>" method="POST" style="flex: 1;" onsubmit="return confirm('Are you sure you want to cancel this ride?');">
+                    <button type="submit" class="btn btn-outline" style="width: 100%; font-size: 1.1rem; padding: var(--space-3); color: var(--color-error); border-color: var(--color-error);">
+                        Cancel Ride
+                    </button>
+                </form>
+            </div>
+        </div>
+    <% } else if (typeof availableDrivers !== 'undefined') { %>
+        <div class="card" style="margin-bottom: var(--space-6);">
+            <div class="card-header" style="justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">Choose Your Driver</h3>
+                <a href="/rider" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Cancel</a>
+            </div>
+            
+            <p class="text-muted" style="margin-bottom: var(--space-4);">
+                Trip: <%= bookingDetails.pickupStreet %> → <%= bookingDetails.dropoffStreet %>
+                (<%= bookingDetails.distance %> km, ~<%= bookingDetails.duration %> min)
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                <% availableDrivers.forEach(d => { %>
+                    <div style="border: 1px solid var(--color-border); padding: var(--space-4); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: var(--space-4); align-items: center;">
+                            <div style="width: 50px; height: 50px; background: var(--color-bg-alt); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                <%= d.Vehicle_Type === 'Premium' ? '🚙' : (d.Vehicle_Type === 'Bike' ? '🏍️' : '🚗') %>
+                            </div>
+                            <div>
+                                <strong style="font-size: 1.1rem;"><%= d.FullName %> <span style="color: #f1c40f; font-size: 0.9rem;">(★ <%= d.Avg_Rating %>)</span></strong>
+                                <p class="text-muted" style="margin: 0; font-size: 0.9rem;"><%= d.Make %> <%= d.Model %> • <%= d.Vehicle_Type %></p>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <strong style="font-size: 1.2rem; color: var(--color-success); display: block; margin-bottom: 5px;">Rs. <%= d.CalculatedFare %></strong>
+                            <form action="/rider/book-specific" method="POST">
+                                <input type="hidden" name="driverId" value="<%= d.Driver_ID %>">
+                                <input type="hidden" name="vehicleId" value="<%= d.Vehicle_ID %>">
+                                <input type="hidden" name="calculatedFare" value="<%= d.CalculatedFare %>">
+                                <input type="hidden" name="pickupCity" value="<%= bookingDetails.pickupCity %>">
+                                <input type="hidden" name="pickupStreet" value="<%= bookingDetails.pickupStreet %>">
+                                <input type="hidden" name="dropoffCity" value="<%= bookingDetails.dropoffCity %>">
+                                <input type="hidden" name="dropoffStreet" value="<%= bookingDetails.dropoffStreet %>">
+                                <input type="hidden" name="distance" value="<%= bookingDetails.distance %>">
+                                <input type="hidden" name="duration" value="<%= bookingDetails.duration %>">
+                                <button type="submit" class="btn btn-primary" style="padding: 0.4rem 1rem;">Select</button>
+                            </form>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+    <% } else { %>
+        <div class="card" style="margin-bottom: var(--space-6);">
+            <div class="card-header" style="justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0;">Book a Ride</h3>
+                <button type="button" class="btn btn-outline" onclick="toggleMap()" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">🗺️ Toggle Map</button>
+            </div>
+            
+            <div id="mapContainer" style="display: none; margin-top: var(--space-4);">
+                <div id="map" style="height: 300px; width: 100%; border-radius: var(--radius-lg); margin-bottom: var(--space-4); z-index: 1;"></div>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button id="btnSetPickup" type="button" class="btn btn-primary" onclick="setMode('pickup')">Set Pickup</button>
+                    <button id="btnSetDropoff" type="button" class="btn btn-outline" onclick="setMode('dropoff')">Set Drop-off</button>
+                </div>
+            </div>
+
+            <form action="/rider/find-drivers" method="POST" style="margin-top: var(--space-4);">
+                <input type="hidden" id="pickupCity" name="pickupCity" required>
+                <input type="hidden" id="pickupStreet" name="pickupStreet" required>
+                <input type="hidden" id="dropoffCity" name="dropoffCity" required>
+                <input type="hidden" id="dropoffStreet" name="dropoffStreet" required>
+                <input type="hidden" id="calcDistance" name="distance" required>
+                <input type="hidden" id="calcDuration" name="duration" required>
+
+                <div class="form-group">
+                    <label class="form-label">Pickup Location</label>
+                    <input type="text" id="pickupDisplay" class="form-control" placeholder="Type pickup location..." oninput="handleSearch(this, 'pickup')" required autocomplete="off">
+                    <div id="pickupResults" class="autocomplete-results"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Drop-off Location</label>
+                    <input type="text" id="dropoffDisplay" class="form-control" placeholder="Type drop-off location..." oninput="handleSearch(this, 'dropoff')" required autocomplete="off">
+                    <div id="dropoffResults" class="autocomplete-results"></div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Find Drivers</button>
+            </form>
+        </div>
+
+        <div class="bento-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Wallet</h3>
+                </div>
+                <h1 style="font-size: 3rem; color: var(--color-success);">Rs. <%= walletBalance %></h1>
+                <p class="text-muted">Available Balance</p>
+                <form action="/rider/wallet/add" method="POST" onsubmit="return confirmAddFunds(this);">
+                    <input type="hidden" name="amount" id="addFundsAmount">
+                    <button type="submit" class="btn btn-outline" style="margin-top: var(--space-4);">Add Funds</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Available Promo Codes</h3>
+                </div>
+                <% if (typeof promos !== 'undefined' && promos.length > 0) { %>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                        <% promos.forEach(p => { %>
+                            <div style="border: 1px dashed var(--color-primary); padding: var(--space-3); border-radius: var(--radius-md); background: rgba(0, 102, 255, 0.05); display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="color: var(--color-primary); font-size: 1.2rem; letter-spacing: 1px;"><%= p.Code %></strong>
+                                    <p class="text-muted" style="margin: 0; font-size: 0.8rem;">Valid until <%= new Date(p.Expiry_Date).toLocaleDateString() %></p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="background: var(--color-success); color: white; padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.9rem; font-weight: bold;">
+                                        Rs. <%= parseFloat(p.Discount) %> OFF
+                                    </span>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } else { %>
+                    <p class="text-muted text-center" style="margin-top: var(--space-4);">No active promo codes at the moment.</p>
+                <% } %>
+            </div>
+        </div>
+    <% } %>
+
+    <div class="card" style="margin-top: var(--space-8);">
+        <div class="card-header">
+            <h3>Complete Ride History</h3>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Pickup</th>
+                        <th>Drop-off</th>
+                        <th>Status</th>
+                        <th>Fare</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (history.length > 0) { %>
+                        <% history.forEach(ride => { %>
+                            <tr>
+                                <td><%= new Date(ride.Request_Time).toLocaleDateString() %></td>
+                                <td><%= ride.PickupStreet %>, <%= ride.PickupCity %></td>
+                                <td><%= ride.DropoffStreet %>, <%= ride.DropoffCity %></td>
+                                <td>
+                                    <% if (ride.Ride_Status === 'Completed') { %>
+                                        <span style="padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-success); color: white; font-size: 0.8rem;">
+                                            <%= ride.Ride_Status %>
+                                        </span>
+                                    <% } else { %>
+                                        <span style="padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-accent); color: white; font-size: 0.8rem;">
+                                            <%= ride.Ride_Status %>
+                                        </span>
+                                    <% } %>
+                                </td>
+                                <td>Rs. <%= ride.Fare || '-' %></td>
+                                <td>
+                                    <% if (ride.Ride_Status === 'Completed') { %>
+                                        <button type="button" class="btn btn-outline" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;" onclick="openRateModal('<%= ride.Ride_ID %>')">Rate</button>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No rides found.</td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Rating Modal -->
+<div class="modal-overlay" id="rateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: var(--color-bg); width: 90%; max-width: 400px; border-radius: var(--radius-lg); padding: var(--space-6); position: relative;">
+        <button type="button" class="modal-close" style="position: absolute; top: var(--space-4); right: var(--space-4); background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-text-muted);" onclick="closeRateModal()">&times;</button>
+        <h3 style="margin-bottom: var(--space-4);">Rate your Driver</h3>
+        <form id="rateForm" method="POST">
+            <div class="form-group">
+                <label class="form-label">Rating (1 to 5 Stars)</label>
+                <select name="score" class="form-control" required>
+                    <option value="5">★★★★★ - Excellent</option>
+                    <option value="4">★★★★☆ - Good</option>
+                    <option value="3">★★★☆☆ - Average</option>
+                    <option value="2">★★☆☆☆ - Poor</option>
+                    <option value="1">★☆☆☆☆ - Terrible</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Comment</label>
+                <textarea name="comment" class="form-control" rows="3" placeholder="Leave a nice comment..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Rating</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openRateModal(rideId) {
+        const form = document.getElementById('rateForm');
+        form.action = '/rider/rate/' + rideId;
+        document.getElementById('rateModal').style.display = 'flex';
+    }
+    
+    function closeRateModal() {
+        document.getElementById('rateModal').style.display = 'none';
+    }
+
+    function toggleMap() {
+        const container = document.getElementById('mapContainer');
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            setTimeout(() => map.invalidateSize(), 100);
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    const map = L.map('map').setView([33.6844, 73.0479], 12); // Islamabad
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let pickupMarker, dropoffMarker;
+    let mode = 'pickup';
+    let pLat, pLng, dLat, dLng;
+
+    // Custom icons
+    const pickupIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+    });
+    const dropoffIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+    });
+
+    window.setMode = function(m) {
+        mode = m;
+        document.getElementById('btnSetPickup').className = m === 'pickup' ? 'btn btn-primary' : 'btn btn-outline';
+        document.getElementById('btnSetDropoff').className = m === 'dropoff' ? 'btn btn-primary' : 'btn btn-outline';
+    }
+
+    function calculateDistanceAndFare() {
+        if (pLat && dLat) {
+            const R = 6371; // km
+            const dLatRad = (dLat - pLat) * Math.PI / 180;
+            const dLngRad = (dLng - pLng) * Math.PI / 180;
+            const a = Math.sin(dLatRad/2) * Math.sin(dLatRad/2) +
+                      Math.cos(pLat * Math.PI / 180) * Math.cos(dLat * Math.PI / 180) *
+                      Math.sin(dLngRad/2) * Math.sin(dLngRad/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            let distance = R * c;
+            if (distance < 1) distance = 1; // Minimum 1km
+            document.getElementById('calcDistance').value = distance.toFixed(2);
+            let duration = Math.round((distance / 30) * 60);
+            if (duration < 5) duration = 5; // Min 5 min
+            document.getElementById('calcDuration').value = duration;
+        }
+    }
+
+    function setLocation(type, lat, lng, displayStr, city, street) {
+        if (type === 'pickup') {
+            document.getElementById('pickupDisplay').value = displayStr;
+            document.getElementById('pickupCity').value = city;
+            document.getElementById('pickupStreet').value = street;
+            pLat = lat; pLng = lng;
+            if (pickupMarker) map.removeLayer(pickupMarker);
+            pickupMarker = L.marker([lat, lng], {icon: pickupIcon}).addTo(map).bindPopup('Pickup').openPopup();
+            map.setView([lat, lng], 14);
+            setMode('dropoff');
+        } else {
+            document.getElementById('dropoffDisplay').value = displayStr;
+            document.getElementById('dropoffCity').value = city;
+            document.getElementById('dropoffStreet').value = street;
+            dLat = lat; dLng = lng;
+            if (dropoffMarker) map.removeLayer(dropoffMarker);
+            dropoffMarker = L.marker([lat, lng], {icon: dropoffIcon}).addTo(map).bindPopup('Drop-off').openPopup();
+            map.setView([lat, lng], 14);
+        }
+        calculateDistanceAndFare();
+    }
+
+    map.on('click', async function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            const data = await res.json();
+            const address = data.address || {};
+            const city = address.city || address.town || address.village || address.state_district || 'Islamabad';
+            const street = address.road || address.suburb || address.neighbourhood || 'Unknown Street';
+            setLocation(mode, lat, lng, `${street}, ${city}`, city, street);
+        } catch (err) {
+            console.error("Geocoding failed", err);
+        }
+    });
+
+    // Autocomplete Logic
+    let searchTimeout;
+    async function handleSearch(inputEl, type) {
+        const query = inputEl.value;
+        const resultsEl = document.getElementById(type + 'Results');
+        if (query.length < 3) {
+            resultsEl.style.display = 'none';
+            return;
+        }
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=pk&limit=5&addressdetails=1`);
+                const data = await res.json();
+                resultsEl.innerHTML = '';
+                if (data.length > 0) {
+                    data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item';
+                        div.innerText = item.display_name;
+                        div.onclick = function() {
+                            resultsEl.style.display = 'none';
+                            const address = item.address || {};
+                            const city = address.city || address.town || address.village || address.state_district || 'Islamabad';
+                            const street = address.road || address.suburb || address.neighbourhood || item.name || 'Unknown Street';
+                            setLocation(type, parseFloat(item.lat), parseFloat(item.lon), item.display_name.split(',')[0] + ', ' + city, city, street);
+                        };
+                        resultsEl.appendChild(div);
+                    });
+                    resultsEl.style.display = 'block';
+                } else {
+                    resultsEl.style.display = 'none';
+                }
+            } catch(e) {
+                console.error('Search error', e);
+            }
+        }, 500);
+    }
+
+    // Hide dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.form-group')) {
+            const p = document.getElementById('pickupResults');
+            const d = document.getElementById('dropoffResults');
+            if(p) p.style.display = 'none';
+            if(d) d.style.display = 'none';
+        }
+    });
+
+    function confirmAddFunds(form) {
+        const amt = prompt('Enter amount to add to your wallet (Rs.):');
+        if (amt && !isNaN(amt) && parseFloat(amt) > 0) {
+            document.getElementById('addFundsAmount').value = parseFloat(amt);
+            return true;
+        }
+        if (amt) alert('Please enter a valid number.');
+        return false;
+    }
+</script>
+
+</body>
+</html>

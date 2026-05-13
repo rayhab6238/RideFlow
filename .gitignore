@@ -1,0 +1,17 @@
+# OS
+Thumbs.db
+.DS_Store
+
+# Dependencies
+node_modules/
+venv/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
